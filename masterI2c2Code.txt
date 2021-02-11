@@ -1,0 +1,458 @@
+#include<SPI.h>                             //Library for SPI 
+#define LED 7
+#define ipbutton 2
+#include <SoftwareSerial.h>
+#include <Wire.h>
+#define ADDR 0b1010000
+#include <LiquidCrystal.h>
+#define F_CPU 8000000
+#include<SPI.h>
+char string[] = "trump(1010101010)biden(0101010101)!";
+char string1[] = "trump(1=<x<=4)biden(5<=x<=9)!";
+char string2[] = "trump(1=<x<=3)biden(4<=x<=6)bernie(7<=x<=9)!";
+//char string[] = "0!";
+//char string1[] = "1!";
+//char string2[] = "6!";
+
+
+
+uint8_t votesAdd = 0x00;
+//uint8_t voted07Add=0x0A;
+//uint8_t voted89Add=0x0e;
+
+volatile int flag = 0;
+//SoftwareSerial mySerial(18,19);
+const int rs = 8, en = 9, d4 = 10, d5 = 11, d6 = 12, d7 = 13; //Pins to which LCD is connected
+LiquidCrystal lcd(rs, en, d4, d5, d6, d7);
+ int8_t Mastersend, Mastereceive;
+volatile int8_t MastereceiveI2c;
+volatile int8_t cases;
+uint8_t votes[10];
+uint8_t voted07[4];
+uint8_t voted89;
+uint8_t allTheVotes[15];
+int mode = 0;
+
+
+
+
+
+
+void setup (void)
+
+{
+
+  //Serial1.begin(1200);
+  //Serial.begin(1200);
+  Wire.begin(8);
+  Serial1.begin(1200);
+  Serial2.begin(1200);
+  //Serial3.begin(1200);
+  
+  pinMode(3, OUTPUT);
+  pinMode(4, OUTPUT);
+  pinMode(2, INPUT);
+  pinMode(5, INPUT);
+  pinMode(6, INPUT);
+  //pinMode(53, INPUT);
+
+
+  digitalWrite(3, LOW);
+  digitalWrite(4, LOW);
+
+  digitalWrite(2, LOW);
+  digitalWrite(5, LOW);
+  digitalWrite(6, LOW);
+  digitalWrite(53,HIGH);// Setting SlaveSelect as HIGH (So master doesnt connnect with slave)
+  //Print("system on");
+
+
+
+
+  readI2CBytes(votesAdd, allTheVotes, 15);
+  for (int i = 0; i < 15; i++) {
+    if (allTheVotes[i] == 255)allTheVotes[i] = 0;
+
+  }
+
+  int j = 0;
+
+  for (; j < 10; j++) {
+    votes[j] = allTheVotes[j];
+  }
+
+  for (; j < 14; j++) {
+
+    voted07[j - 10] = allTheVotes[j];
+
+  }
+
+  voted89 = allTheVotes[14];
+
+  lcd.begin(16, 2);
+
+  lcd.print("pin2 for multi"); 
+  lcd.setCursor(0, 1);
+  lcd.print("pin5 for solo");
+  delay(100);
+  lcd.clear();
+  Print("pin6 for multi6");
+  while (digitalRead(2) == LOW and digitalRead(5) == LOW and digitalRead(6) == LOW);
+  if (digitalRead(5) == HIGH)mode = 1;
+  else if (digitalRead(6) == HIGH)mode = 6;
+  Print("mode is" + String(mode));
+
+  Serial.begin(1200);
+  SPI.begin();                            //Begins the SPI commnuication
+  SPI.setClockDivider(SPI_CLOCK_DIV8);    //Sets clock for SPI communication at 8 (16/8=2Mhz)
+   // Setting SlaveSelect as HIGH (So master doesnt connnect with slave)
+  byte Mastersend, Mastereceive;
+  digitalWrite(53, LOW);
+  if (!mode ) {
+    int n = sizeof(string) / sizeof(string[0]);
+    //Print("size is" + String(n));
+
+    for (int i = 0; i < n; i++) { 
+      
+      Mastersend = string[i];
+      SPI.transfer(Mastersend);
+      delay(10);
+    }
+    
+  }
+
+  if (mode == 1 ) {
+    int n = sizeof(string1) / sizeof(string1[0]);
+    //Print("size is" + String(n));
+
+    for (int i = 0; i < n; i++) {
+      Mastersend = string1[i];
+      SPI.transfer(Mastersend);
+      delay(10);
+    }
+
+  }
+
+  if (mode > 1) {
+    int n = sizeof(string2) / sizeof(string2[0]);
+    //Print("size is" + String(n));
+
+    for (int i = 0; i < n; i++) {
+      Mastersend = string2[i];
+      SPI.transfer(Mastersend);
+      delay(10);
+    }
+  }
+  //SPI.end();
+  //Serial.end();
+  //Serial.begin(1200);
+  lcd.print("pin2 for results"); 
+  lcd.setCursor(0, 1);
+  lcd.print("pin5 for save");
+  delay(100);
+  lcd.clear();
+  Print("pin6 for reset");
+  Wire.onReceive(receiveEvent);
+  
+
+
+}
+
+
+void receiveEvent() {
+  
+  MastereceiveI2c= Wire.read(); // receive a byte as character
+//  Print("MastereceiveI2c is");
+//  Print(String(MastereceiveI2c));
+  cases=abs(MastereceiveI2c);
+  if(!cases){
+  flag++;
+  flag = flag % 4;
+  }
+}
+          
+
+
+
+void loop(void)
+{
+
+
+  if (digitalRead(2) == HIGH) {
+    digitalWrite(3, HIGH);
+    digitalWrite(4, HIGH);
+    delay(50);
+    digitalWrite(3, LOW);
+    digitalWrite(4, LOW);
+
+    lcd.print("123456789"); //Display a intro message
+    lcd.setCursor(0, 1);// set the cursor to column 0, line 1
+    for (int i = 1; i < 10; i++) {
+      lcd.print(votes[i]); //Display a intro message
+    }
+    delay(100); //Wait for display to show info
+    lcd.clear();
+
+//    lcd.print("01234"); //Display a intro message
+//    lcd.setCursor(0, 1);// set the cursor to column 0, line 1
+//
+//    for (int i = 0; i < 4; i++) {
+//      lcd.println(voted07[i]);
+//    }
+//    lcd.println(voted89);
+//
+//    delay(100); //Wait for display to show info
+//    lcd.clear();
+
+  }
+  else if (digitalRead(5) == HIGH) {
+
+    int j = 0;
+
+    for (; j < 10; j++) {
+      allTheVotes[j] = votes[j];
+    }
+
+    for (; j < 14; j++) {
+
+      allTheVotes[j] = voted07[j - 10];
+
+    }
+
+    allTheVotes[14] = voted89;
+
+    writeI2CBytes(votesAdd, allTheVotes, 15);
+
+    Print("done saving");
+
+    delay(100);
+
+  }
+  else if (digitalRead(6) == HIGH) {
+
+    uint8_t temp[15];
+
+    for (int j = 0; j < 15; j++) {
+      temp[j] = 0;
+    }
+
+
+    writeI2CBytes(votesAdd, temp, 15);
+
+    Print("done reseting");
+
+    delay(100);
+
+  }
+
+  else if(cases){
+         
+     
+          
+          cases=0;
+          int8_t temp=Mastereceive;
+          
+          Mastereceive=MastereceiveI2c;
+
+          MastereceiveI2c=0;
+          
+//          Print("MastereceiveI2c");
+//          Print(String(MastereceiveI2c));
+          voter();
+          
+          Mastereceive=temp;
+          flag++;
+         flag=flag%4;
+           
+          
+  }
+
+  else {
+    switch (flag) {
+      case 0:
+        if (Serial1.available()) {
+          
+          //Print("inside case0");
+
+          
+
+
+          Mastereceive = Serial1.read();
+//          Print("case0");
+//          Print(String(Mastereceive));
+          voter();
+
+
+          
+           
+
+        }
+        flag++;
+        flag = flag % 4;
+        break;
+
+      case 1:
+        if (Serial2.available()) {
+          //Print("inside case1");
+
+          
+
+
+          Mastereceive = Serial2.read();
+//          Print("case1");
+//          Print(String(Mastereceive));
+          voter();
+          
+          
+
+        }
+        flag++;
+        flag = flag % 4;
+        break;
+
+     
+
+        default:
+        delay(10);
+        SPI.transfer(flag);
+        break;
+       }
+
+     }
+  
+}
+
+
+void writeI2CBytes(byte data_addr, byte* data, int Size) {
+  Wire.beginTransmission(ADDR);
+  Wire.write(0x00);
+  Wire.write(data_addr);
+  for (int i = 0; i < Size; i++) {
+    Wire.write(data[i]);
+  }
+  Wire.endTransmission();
+  //delay(1000);
+}
+
+
+void readI2CBytes(byte data_addr, byte* data, int Size) {
+
+  Wire.beginTransmission(ADDR);
+  Wire.write(0x00);
+  Wire.write(data_addr);
+  Wire.endTransmission();
+  Wire.requestFrom(ADDR, Size); //retrieve 1 returned byte
+  for (int i = 0; i < Size; i++) {
+    if (Wire.available())
+      data[i] = Wire.read();
+  }
+}
+
+
+void voter() {
+
+  if(abs(Mastereceive)!=0){
+
+  int Step = (abs(Mastereceive) == 9) ? 4 : 0;
+
+
+//  if (!mode) {
+//    Print("the value of bit is");
+//    if (abs(Mastereceive) < 8)Print(String(bitRead(voted07[flag], abs(Mastereceive))));
+//    else Print(String(bitRead(voted89, flag + Step)));
+//  }
+
+  int check = 0;
+  int i = 0;
+  int check07 = bitRead(voted07[flag], abs(Mastereceive));
+  int check89 = bitRead(voted89, flag + Step);
+
+//  if (!mode) {
+//    if (abs(Mastereceive) < 8)Print("check07" + String(check07));
+//    else Print("check89" + String(check89));
+//  }
+
+  for (i = 0; i < 10; i++) {
+    if (i < 8)if (bitRead(voted07[flag], i)) {
+        check += 1;
+      }
+    if (i == 8)if (bitRead(voted89, flag)) {
+        check += 1;
+
+      }
+    if (i == 9) if (bitRead(voted89, flag + 4)) {
+        check += 1;
+
+      }
+    if(check==1 and mode==1)break;
+  }
+
+  int Step2 = -1;
+
+  if (mode)Step2 = (i == 9) ? 4 : 0;
+
+//  if (check ) {
+//    lcd.print("i is" + String(i)); //Display a intro message
+//    lcd.setCursor(0, 1);
+//    lcd.print("step2 is" + String(Step2));
+//    delay(100);
+//    lcd.clear();
+//  }
+
+  if (Mastereceive < 0) {
+    if (check) {
+      if (!mode or mode > 1) {
+        if (abs(Mastereceive) < 8 and check07 ) {
+          votes[abs(Mastereceive)] -= 1;
+          bitWrite(voted07[flag], abs(Mastereceive), 0);
+        }
+        else if (abs(Mastereceive) >= 8 and check89) {
+          votes[abs(Mastereceive)] -= 1;
+          bitWrite(voted89, flag + Step, 0);
+        }
+      }
+      else {
+        votes[i] -= 1;
+        if (i < 8)bitWrite(voted07[flag], i, 0);
+        else bitWrite(voted89, flag + Step2, 0);
+      }
+    }
+  }
+  else {
+    if (!mode or check < mode) {
+      if (Mastereceive < 8 and !check07) {
+        votes[Mastereceive] += 1;
+        bitWrite(voted07[flag], Mastereceive, 1);
+      }
+      else if ( Mastereceive >= 8 and !check89) {
+        votes[Mastereceive] += 1;
+        bitWrite(voted89, flag + Step, 1);
+      }
+    }
+    else if (!check) {
+      votes[Mastereceive] += 1;
+      if (Mastereceive < 8)bitWrite(voted07[flag], Mastereceive, 1);
+      else if (Mastereceive == 8)bitWrite(voted89, flag, 1);
+      else bitWrite(voted89, flag + 4, 1);
+    }
+
+  }
+
+//  if (!mode) {
+//    Print("the value of bit after is");
+//    if (abs(Mastereceive) < 8)Print(String(bitRead(voted07[flag], abs(Mastereceive))));
+//    else Print(String(bitRead(voted89, (flag + Step))));
+//
+//  }
+
+}
+}
+
+void Print(String s) {
+  lcd.println(s);
+  delay(50);
+  lcd.clear();
+}
+
+
+
