@@ -1,12 +1,13 @@
 # VotingMachine
 an implementation of a voting machine,with a master arduino board sending the questions,and collecting the votes of the slave arduinos.
 
-with a combined use of spi,i2c and uart transmition protocals,we are able to send all the questions to the voting machines at once,and then collect the results,with a round-robin
-sort of way,while also enabling the voters to take back their votes,in case of a mistake.to send a vote,voter have to select the option they want,and then press +,and to take back a vote,voters have to select the option they have voted on,and then press the - button to take the vote back.
+with a combined use of spi,i2c and uart transmition protocals,we are able to send all the questions to the voting machines at once,and then collect the results,with round-robin scheduling, while also enabling the voters to take back their votes, in case of a mistake.
 
-all the slaves have no internal memory,so the voting process is discrete.
+to send a vote, voter has to select the option they want and then press +. to take back a vote, voters have to select the option they have voted on,and then press the - button to take the vote back.
 
-the implementation is done with the help of the arduino ide,and is the the proteus envirement.
+all the slaves have no internal memory, so the voting process is discrete.
+
+the implementation is done with the help of the arduino ide and the proteus envirement.
 
 the implementation supports three scenarios:
 1-we only use uart
